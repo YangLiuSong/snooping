@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+
+    <link rel="stylesheet" href="https://a.amap.com/jsapi_demos/static/demo-center/css/demo-center.css" />
+    <title>地图显示</title>
+
+    <style>
+        html, body, #container {
+            height: 100%;
+            width: 100%;
+        }
+
+        .content-window-card p {
+            height: 2rem;
+        }
+
+        div.info-top div {
+            display: inline-block;
+            color: #333333;
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 31px;
+            padding: 0 10px;
+        }
+
+        div.info-top img {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            transition-duration: 0.25s;
+        }
+
+        div.info-top img:hover {
+            box-shadow: 0px 0px 5px #000;
+        }
+
+        div.info-bottom img {
+            position: relative;
+            z-index: 104;
+        }
+
+        span {
+            margin-left: 5px;
+            font-size: 11px;
+        }
+
+        .info-middle img {
+            float: left;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+<div id="container"  class="map" tabindex="0"></div>
+<div class="info">
+    <div class="input-item">
+        <div class="input-item-prepend">
+            <span class="input-item-text" style="width:8rem;">请输入关键字</span>
+        </div>
+        <input id='text_search' type="text">
+        <button id="search" onclick="do_search()">搜索</button>
+    </div>
+</div>
+<script src="https://webapi.amap.com/maps?v=1.4.11&key=1854849ee9a0131347baa950c37a0c29"></script>
+<script type="text/javascript" src="https://cache.amap.com/lbs/static/addToolbar.js"></script>
+<script src="http://libs.baidu.com/jquery/1.9.0/jquery.js"></script>
+<script>
+    var result_points = [];
+    let map;
+    var mass;
+    function init(){
+        map = new AMap.Map('container', {
+            resizeEnable: true, //是否监控地图容器尺寸变化
+            zoom:8, //初始化地图层级
+            center: [103.001033,29.987722] //初始化地图中心点
+        });
+    }
+    init();
+
+    function do_search() {
+        if (mass)
+            mass.clear();
+        result_points = [];
+        const search = document.getElementById("text_search").value;
+        $(function () {
+            $.ajax({
+                type:'post',
+                url:'http://localhost:8080/search/yaan',
+                dataType:"json",
+                async:false,
+                data:{text:search},
+                success:function (data) {
+                    result_points = data;
+                }
+            });
+            console.log(result_points);
+        });
+
+        const style = [{
+            url: 'https://a.amap.com/jsapi_demos/static/images/mass0.png',
+            anchor: new AMap.Pixel(5, 5),
+            size: new AMap.Size(8, 8)
+        }];
+        mass = new AMap.MassMarks(result_points,{
+            opacity: 0.8,
+            zIndex: 111,
+            cursor: 'pointer',
+            style: style
+        });
+
+        var marker = new AMap.Marker({content:' ',map:map});
+        mass.on('mouseover',function(e){
+            var content = [
+                "<div>微博用户昵称：" + e.data.name + "<br>"+
+                "微博发布位置：" + e.data.lnglat+ "<br>"+
+                "微博文本内容：" + e.data.text+ "<br>"+
+                "微博发布时间：" + e.data.time + "</div>"
+            ];
+            marker.setPosition(e.data.lnglat);
+            marker.setLabel({content:content})
+        });
+        mass.on('mouseout',function (e) {
+            marker.setLabel("");
+        });
+        mass.setMap(map);
+    }
+</script>
+</body>
+</html>
